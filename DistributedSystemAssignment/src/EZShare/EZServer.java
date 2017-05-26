@@ -14,6 +14,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -60,10 +61,10 @@ import com.event.SubscribeListenerManager;
  *
  */
 public class EZServer {
-	
+
 	private static SubscribeListenerManager listenerManager = new SubscribeListenerManager();
 	private static SubscribeListenerManager listenerManager_secure = new SubscribeListenerManager();
-	// a map of subscriber id and its listener.	
+	// a map of subscriber id and its listener.
 
 	// the password of key store and trust key store
 	private static final String SERVER_TRUST_KEY_STORE_PASSWORD = "123456";
@@ -93,12 +94,26 @@ public class EZServer {
 	private static ArrayList<InetAddress> clientAddresses = new ArrayList<InetAddress>();
 	private static ArrayList<InetAddress> clientAddresses_secure = new ArrayList<InetAddress>();
 
+	private static Host itself;
+	private static Host itself_secure;
+
+	private static String hostAddress;
 	// log4j logger
 	private static Logger logger = Logger.getLogger(EZServer.class);
 
 	public static void main(String[] args) {
-		// Enable debugging to view the handshake and communication which happens between the SSLClient and the SSLServer
-		
+
+		try {
+			hostAddress = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e1) {
+			e1.printStackTrace();
+		}
+		itself = new Host(hostAddress, port);
+		itself_secure = new Host(hostAddress, port_secure);
+
+		// Enable debugging to view the handshake and communication which
+		// happens between the SSLClient and the SSLServer
+
 		logger.info("[INFO] - Starting the EZShare Server");
 		Options options = new Options();
 		options.addOption("help", "show all the options on server ");
@@ -154,13 +169,15 @@ public class EZServer {
 		logger.info("[INFO] - bound to secure port : " + port_secure);
 		logger.info("[INFO] - using secret : " + secret);
 
-		//Specify the keystore details (this can be specified as VM arguments as well)
-		//the keystore file contains an application's own certificate and private key
+		// Specify the keystore details (this can be specified as VM arguments
+		// as well)
+		// the keystore file contains an application's own certificate and
+		// private key
 		ServerSocketFactory factory = ServerSocketFactory.getDefault();
 		try {
-			//Unsecured socket
+			// Unsecured socket
 			ServerSocket server = factory.createServerSocket(port);
-			//Secured socket
+			// Secured socket
 			SSLContext ctx = SSLContext.getInstance("SSL");
 			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 			TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
@@ -177,7 +194,7 @@ public class EZServer {
 			SSLServerSocket server_secure = (SSLServerSocket) ctx.getServerSocketFactory()
 					.createServerSocket(port_secure);
 			server_secure.setNeedClientAuth(true);
-			
+
 			logger.info("[INFO] - started");
 
 			// Wait for connections.
@@ -199,19 +216,14 @@ public class EZServer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (KeyStoreException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (CertificateException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (UnrecoverableKeyException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (KeyManagementException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -270,7 +282,7 @@ public class EZServer {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-		} 
+		}
 	}
 
 	/**
@@ -279,20 +291,20 @@ public class EZServer {
 	 * @param client
 	 */
 	private static void serveClient(Socket client) {
-	
+
 		addClientAddress(client);
-	
+
 		try (Socket clientSocket = client) {
 			// Input stream
 			DataInputStream input = new DataInputStream(clientSocket.getInputStream());
 			// Output Stream
 			DataOutputStream output = new DataOutputStream(clientSocket.getOutputStream());
-	
+
 			/** get client's command */
 			JSONParser parser = new JSONParser();
 			JSONObject clientCommand = (JSONObject) parser.parse(input.readUTF());
 			logger.info("[INFO] - RECEIVED: " + clientCommand.toJSONString());
-	
+
 			LinkedList<JSONObject> results = dealWithCommand(clientCommand, output, input);
 			for (JSONObject result : results) {
 				output.writeUTF(result.toJSONString());
@@ -334,7 +346,7 @@ public class EZServer {
 			logger.info("[INFO] - RECEIVED: " + clientCommand.toJSONString());
 
 			LinkedList<JSONObject> results = dealWithCommand_secure(clientCommand, output, input);
-			if(results!=null){
+			if (results != null) {
 				for (JSONObject result : results) {
 					output.writeUTF(result.toJSONString());
 					output.flush();
@@ -363,7 +375,8 @@ public class EZServer {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private static LinkedList<JSONObject> dealWithCommand(JSONObject clientCommand, DataOutputStream output, DataInputStream input) {
+	private static LinkedList<JSONObject> dealWithCommand(JSONObject clientCommand, DataOutputStream output,
+			DataInputStream input) {
 		LinkedList<JSONObject> results = new LinkedList<JSONObject>();
 		JSONObject result = new JSONObject();
 
@@ -416,7 +429,8 @@ public class EZServer {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private static LinkedList<JSONObject> dealWithCommand_secure(JSONObject clientCommand, DataOutputStream output, DataInputStream input) {
+	private static LinkedList<JSONObject> dealWithCommand_secure(JSONObject clientCommand, DataOutputStream output,
+			DataInputStream input) {
 		LinkedList<JSONObject> results = new LinkedList<JSONObject>();
 		JSONObject result = new JSONObject();
 
@@ -460,146 +474,154 @@ public class EZServer {
 
 		return results;
 	}
-	
+
 	/**
 	 * subscribe
 	 * 
-	 * @param clientCommand, output
+	 * @param clientCommand,
+	 *            output
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private static JSONObject subscribe(JSONObject clientCommand, DataOutputStream output, DataInputStream input){
+	private static JSONObject subscribe(JSONObject clientCommand, DataOutputStream output, DataInputStream input) {
 		JSONObject result;
-		result = subscribeCommandValidOrNot(clientCommand); // return null if clientcommand is invalid
-		if(result!=null)
+		result = subscribeCommandValidOrNot(clientCommand); // return null if
+															// clientcommand is
+															// invalid
+		if (result != null)
 			return result;
 		result = new JSONObject();
 		result.put("response", "success");
 		result.put("id", clientCommand.get("id").toString());
-		try{
+		try {
 			output.writeUTF(result.toJSONString());
 			output.flush();
 			logger.info("[FINE] - SEND: " + result.toJSONString());
 			result.remove("response");
 			result.remove("id");
-		}catch(IOException e){
+		} catch (IOException e) {
 			System.out.println(e.toString());
 		}
-		
-		//create a listener to listen to new resources published and shared in this server
+
+		// create a listener to listen to new resources published and shared in
+		// this server
 		SubscribeEventListener listener = new SubscribeEventListener(clientCommand, output);
 		listenerManager.addSubscribeEventListener(listener);
-		
-		//subscribe to the other severs
-		for(Host ht : hostList){
+
+		// subscribe to the other severs
+		for (Host ht : hostList) {
 			listener.subscribeToServer(ht);
 		}
-		
-		//waiting for the client to unsubscribe
+
+		// waiting for the client to unsubscribe
 		JSONParser parser = new JSONParser();
-		try{
+		try {
 			JSONObject receive = (JSONObject) parser.parse(input.readUTF().toString());
-			if("UNSUBSCRIBE".equals(receive.get("command").toString())){
+			if ("UNSUBSCRIBE".equals(receive.get("command").toString())) {
 				logger.info("[FINE] - RECEIVED: " + receive.toJSONString());
 				listenerManager.deleteSubscribeEventListener(listener);
 				listener.unsubscribeAllServers();
 				result.put("resultSize", listener.resultSize);
-			}
-			else{
+			} else {
 				result.put("response", "error");
 				result.put("errorMessage", "invalid command");
 			}
-		}catch(ParseException e){
+		} catch (ParseException e) {
 			System.out.println(e.toString());
-		}catch (IOException e) {
+		} catch (IOException e) {
 			System.out.println(e.toString());
 		}
-		
+
 		return result;
 	}
-	
+
 	/**
 	 * subscribe_secure
 	 * 
-	 * @param clientCommand, output
+	 * @param clientCommand,
+	 *            output
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private static JSONObject subscribe_secure(JSONObject clientCommand, DataOutputStream output, DataInputStream input){
+	private static JSONObject subscribe_secure(JSONObject clientCommand, DataOutputStream output,
+			DataInputStream input) {
 		JSONObject result;
-		result = subscribeCommandValidOrNot(clientCommand); // return null if clientcommand is invalid
-		if(result!=null)
+		result = subscribeCommandValidOrNot(clientCommand); // return null if
+															// clientcommand is
+															// invalid
+		if (result != null)
 			return result;
-		
+
 		result = new JSONObject();
 		result.put("response", "success");
 		result.put("id", clientCommand.get("id").toString());
-		try{
+		try {
 			output.writeUTF(result.toJSONString());
 			output.flush();
 			logger.info("[FINE] - SEND: " + result.toJSONString());
 			result.remove("response");
 			result.remove("id");
-		}catch(IOException e){
+		} catch (IOException e) {
 			System.out.println(e.toString());
 		}
-		
-		//create a listener to listen to new resources published and shared in this server
+
+		// create a listener to listen to new resources published and shared in
+		// this server
 		SubscribeEventListener listener = new SubscribeEventListener(clientCommand, output);
 		listenerManager_secure.addSubscribeEventListener(listener);
-		
-		//subscribe to the other severs
-		for(Host ht : hostList_secure){
+
+		// subscribe to the other severs
+		for (Host ht : hostList_secure) {
 			listener.subscribeToServer(ht);
 		}
-		
+
 		JSONParser parser = new JSONParser();
-		try{
-			//wait for the client to unsubscribe
+		try {
+			// wait for the client to unsubscribe
 			JSONObject receive = (JSONObject) parser.parse(input.readUTF().toString());
 			listenerManager.deleteSubscribeEventListener(listener);
-			if("UNSUBSCRIBE".equals(receive.get("command").toString())){
+			if ("UNSUBSCRIBE".equals(receive.get("command").toString())) {
 				listener.unsubscribeAllServers();
 				listenerManager_secure.deleteSubscribeEventListener(listener);
-				result.put("resultSize", String.valueOf(listener.resultSize) );
-			}else{
+				result.put("resultSize", String.valueOf(listener.resultSize));
+			} else {
 				result.put("response", "error");
 				result.put("errorMessage", "invalid command");
 			}
-		}catch(ParseException e){
+		} catch (ParseException e) {
 			System.out.println(e.toString());
-		}catch (IOException e) {
+		} catch (IOException e) {
 			System.out.println(e.toString());
 		}
 		return result;
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	private static JSONObject subscribeCommandValidOrNot(JSONObject clientCommand){
+	private static JSONObject subscribeCommandValidOrNot(JSONObject clientCommand) {
 		JSONObject result = new JSONObject();
-		if(!clientCommand.containsKey("resourceTemplate")){
+		if (!clientCommand.containsKey("resourceTemplate")) {
 			result.put("response", "error");
 			result.put("errorMessage", "missing resourceTemplate");
 			return result;
 		}
-		JSONObject resourceTemplate = (JSONObject)clientCommand.get("resourceTemplate");
+		JSONObject resourceTemplate = (JSONObject) clientCommand.get("resourceTemplate");
 
 		if (!clientCommand.containsKey("relay")) {
 			result.put("response", "error");
 			result.put("errorMessage", "missing resourceTemplate");
 			return result;
 		}
-		if (!clientCommand.containsKey("id")){
+		if (!clientCommand.containsKey("id")) {
 			result.put("response", "error");
 			result.put("errorMessage", "missing resourceTemplate");
 			return result;
 		}
-		if (!clientCommand.containsKey("resourceTemplate")){
+		if (!clientCommand.containsKey("resourceTemplate")) {
 			result.put("response", "error");
 			result.put("errorMessage", "missing resourceTemplate");
 			return result;
 		}
-		
+
 		if (resourceTemplate.containsKey("owner")) {
 			String owner = resourceTemplate.get("owner").toString();
 			owner = Util.clean(owner);
@@ -612,7 +634,7 @@ public class EZServer {
 		result = null;
 		return result;
 	}
-	
+
 	/**
 	 * publish
 	 * 
@@ -703,8 +725,8 @@ public class EZServer {
 		args[1] = rs;
 		accessResources("ADD", args);
 		result.put("response", "success");
-		
-		//inform all subscribers of the resource published just now
+
+		// inform all subscribers of the resource published just now
 		listenerManager.informSubscribersOfNewResource(rs);
 		listenerManager_secure.informSubscribersOfNewResource(rs);
 		return result;
@@ -1046,7 +1068,7 @@ public class EZServer {
 		}
 		// sent query to every server in the host list
 		// clientCommand
-		//@TODO: secure connections to hosts in hostList_secure
+		// @TODO: secure connections to hosts in hostList_secure
 		if (relay.equals("true")) {
 			for (Host ht : hostList_secure) {
 				Socket socket = null;
@@ -1068,7 +1090,7 @@ public class EZServer {
 					ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 
 					socket = (SSLSocket) ctx.getSocketFactory().createSocket(ht.getHostname(), ht.getPort());
-					
+
 					newCommand = (JSONObject) parser.parse(clientCommand.toJSONString());
 					newCommand.put("relay", "false");
 					newCommand.put("owner", "");
@@ -1078,19 +1100,14 @@ public class EZServer {
 				} catch (IOException | ParseException e) {
 					e.printStackTrace();
 				} catch (NoSuchAlgorithmException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (KeyStoreException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (CertificateException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (UnrecoverableKeyException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (KeyManagementException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -1370,11 +1387,11 @@ public class EZServer {
 		args[1] = rs;
 		accessResources("ADD", args);
 		result.put("response", "success");
-		
-		//inform all subscribers of the resource shared just now
+
+		// inform all subscribers of the resource shared just now
 		listenerManager.informSubscribersOfNewResource(rs);
 		listenerManager_secure.informSubscribersOfNewResource(rs);
-		
+
 		return result;
 	}
 
@@ -1489,7 +1506,7 @@ public class EZServer {
 		result.put("response", "success");
 		return result;
 	}
-	
+
 	/**
 	 * getSecret
 	 * 
@@ -1600,9 +1617,22 @@ public class EZServer {
 			}
 			synchronized (hostList_secure) {
 				showHost_secure();
-				// not empty not himself
+				// not empty
 				if (!hostList_secure.isEmpty()) {
 					selectedHost = getRandomHost_secure();
+
+					// not himself
+					boolean localHostFlag = false;
+					if (selectedHost.getHostname().equals("localhost")) {
+						localHostFlag = true;
+						selectedHost.setHostname(hostAddress);
+					}
+					if(selectedHost.equals(itself_secure)){
+						continue;
+					} else if(localHostFlag){
+						removeHost_secure(selectedHost);
+					}
+
 					for (Host ht : hostList_secure) {
 						serverList.add(ht.getHostJSON());
 					}
@@ -1624,11 +1654,13 @@ public class EZServer {
 						tmf.init(tks);
 						ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 
-						socket = (SSLSocket) ctx.getSocketFactory().createSocket(selectedHost.getHostname(), selectedHost.getPort());
+						socket = (SSLSocket) ctx.getSocketFactory().createSocket(selectedHost.getHostname(),
+								selectedHost.getPort());
 						sendToServer(exchangeCommand, socket);
 						socket.close();
 					} catch (IOException e) {
 						// remove
+						System.out.println("Fault Detect");
 						removeHost_secure(selectedHost);
 					} catch (NoSuchAlgorithmException e) {
 						e.printStackTrace();
@@ -1665,9 +1697,21 @@ public class EZServer {
 			}
 			synchronized (hostList) {
 				showHost();
-				// not empty not himself
+				// not empty
 				if (!hostList.isEmpty()) {
 					selectedHost = getRandomHost();
+					
+					// not himself
+					boolean localHostFlag = false;
+					if (selectedHost.getHostname().equals("localhost")) {
+						localHostFlag = true;
+						selectedHost.setHostname(hostAddress);
+					}
+					if(selectedHost.equals(itself)){
+						continue;
+					} else if(localHostFlag){
+						removeHost(selectedHost);
+					}
 					for (Host ht : hostList) {
 						serverList.add(ht.getHostJSON());
 					}
@@ -1692,7 +1736,7 @@ public class EZServer {
 			hostList.remove(selectedHost);
 		}
 	}
-	
+
 	private static synchronized void removeHost_secure(Host selectedHost) {
 		if (hostList_secure.contains(selectedHost)) {
 			hostList_secure.remove(selectedHost);
