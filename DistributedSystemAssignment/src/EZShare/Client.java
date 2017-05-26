@@ -3,27 +3,18 @@ package EZShare;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.log4j.Logger;
 import org.apache.commons.cli.Options;
@@ -45,8 +36,6 @@ import org.json.simple.parser.ParseException;
  *
  */
 public class Client {
-	private static final String CLIENT_KEY_STORE_PASSWORD = "123456";
-	private static final String CLIENT_TRUST_KEY_STORE_PASSWORD = "123456";
 	// IP and port
 	private static String ip = "localhost";
 	private static int port = 33254;
@@ -68,6 +57,7 @@ public class Client {
 			//JSONObject request = getRandomRequest();
 			JSONObject request = getRequestFromCommandLine(args);
 			
+			
 			if(debug)
 				logger.info("[INFO] - setting debug on");
 			if(request.containsKey("command")){
@@ -78,19 +68,13 @@ public class Client {
 				}
 			}
 			if(secure){
-				SSLContext ctx = SSLContext.getInstance("SSL");  
-				KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");  
-	            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");  
-	            KeyStore ks = KeyStore.getInstance("JKS");
-	            KeyStore tks = KeyStore.getInstance("JKS");
-	            
-	            ks.load(new FileInputStream("clientKeyStore/ClientKeyStore"), CLIENT_KEY_STORE_PASSWORD.toCharArray());  
-	            tks.load(new FileInputStream("clientKeyStore/tClientKeyStore"), CLIENT_TRUST_KEY_STORE_PASSWORD.toCharArray());  
-	            kmf.init(ks, CLIENT_KEY_STORE_PASSWORD.toCharArray());  
-	            tmf.init(tks);  
-	            ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-	            
-	            socket = (SSLSocket) ctx.getSocketFactory().createSocket(ip, port);  
+				System.setProperty("javax.net.ssl.keyStore","clientKeystore/ClientKeyStore");
+				System.setProperty("javax.net.ssl.keyStorePassword","123456");
+				System.setProperty("javax.net.ssl.trustStore","clientKeystore/ClientKeyStore");
+				System.setProperty("javax.net.ssl.trustStorePassword","123456");
+				
+				SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+				socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
 			}else{
 				socket = new Socket(ip, port);
 			}
@@ -167,22 +151,7 @@ public class Client {
 			System.out.println("connection refused!");
 		}catch (ParseException e) {
 			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (KeyStoreException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (CertificateException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (UnrecoverableKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (KeyManagementException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
+		}finally {
 			try {
 				if (input != null)
 					input.close();
@@ -391,7 +360,7 @@ public class Client {
 			/**enter secure mode*/
 			if(cmd.hasOption("secure")){
 				secure=true;
-				port = 3781;
+//				port = 3781;
 			}
 			
 			/**get server host and port*/

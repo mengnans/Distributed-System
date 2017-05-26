@@ -15,12 +15,6 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -30,11 +24,10 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import javax.net.ServerSocketFactory;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -67,8 +60,6 @@ public class EZServer {
 	// a map of subscriber id and its listener.
 
 	// the password of key store and trust key store
-	private static final String SERVER_TRUST_KEY_STORE_PASSWORD = "123456";
-	private static final String SERVER_KEY_STORE_PASSWORD = "123456";
 	// Declare the port number
 	private static int port = 33254;
 	// Declare the secure port number
@@ -88,7 +79,7 @@ public class EZServer {
 	// connection interval limit
 	private static long connectionIntervalLimit = 1;
 	// exchange interval
-	private static long exchangeInterval = 3;
+	private static long exchangeInterval = 10;
 	// secure exchange interval
 	// store those clients' addresses who just used the server
 	private static ArrayList<InetAddress> clientAddresses = new ArrayList<InetAddress>();
@@ -178,21 +169,14 @@ public class EZServer {
 			// Unsecured socket
 			ServerSocket server = factory.createServerSocket(port);
 			// Secured socket
-			SSLContext ctx = SSLContext.getInstance("SSL");
-			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-			TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-			KeyStore ks = KeyStore.getInstance("JKS");
-			KeyStore tks = KeyStore.getInstance("JKS");
-
-			ks.load(new FileInputStream("serverKeystore/ServerKeyStore"), SERVER_KEY_STORE_PASSWORD.toCharArray());
-			tks.load(new FileInputStream("serverKeystore/tServerKeyStore"),
-					SERVER_TRUST_KEY_STORE_PASSWORD.toCharArray());
-			kmf.init(ks, SERVER_KEY_STORE_PASSWORD.toCharArray());
-			tmf.init(tks);
-			ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-
-			SSLServerSocket server_secure = (SSLServerSocket) ctx.getServerSocketFactory()
-					.createServerSocket(port_secure);
+			System.setProperty("javax.net.ssl.keyStore","serverKeystore/ServerKeyStore");
+			System.setProperty("javax.net.ssl.keyStorePassword","123456");
+			System.setProperty("javax.net.ssl.trustStore","serverKeystore/ServerKeyStore");
+			System.setProperty("javax.net.ssl.trustStorePassword","123456");
+			
+			SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) SSLServerSocketFactory
+					.getDefault();
+			SSLServerSocket server_secure = (SSLServerSocket) sslserversocketfactory.createServerSocket(port_secure);
 			server_secure.setNeedClientAuth(true);
 
 			logger.info("[INFO] - started");
@@ -215,16 +199,6 @@ public class EZServer {
 
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		} catch (KeyStoreException e) {
-			e.printStackTrace();
-		} catch (CertificateException e) {
-			e.printStackTrace();
-		} catch (UnrecoverableKeyException e) {
-			e.printStackTrace();
-		} catch (KeyManagementException e) {
-			e.printStackTrace();
 		}
 	}
 
@@ -245,8 +219,7 @@ public class EZServer {
 	private static void server(ServerSocket server) {
 		try {
 			while (true) {
-				Socket client;
-				client = server.accept();
+				Socket client = server.accept();
 				// if the client just used the server before, close it
 				InetAddress clientIpAddress = client.getInetAddress();
 				if (clientAddresses.contains(clientIpAddress)) {
@@ -261,7 +234,7 @@ public class EZServer {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
+		} 
 	}
 
 	private static void server_secure(ServerSocket server) {
@@ -1075,21 +1048,8 @@ public class EZServer {
 				JSONParser parser = new JSONParser();
 				JSONObject newCommand = new JSONObject();
 				try {
-					SSLContext ctx = SSLContext.getInstance("SSL");
-					KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-					TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-					KeyStore ks = KeyStore.getInstance("JKS");
-					KeyStore tks = KeyStore.getInstance("JKS");
-
-					ks.load(new FileInputStream("serverKeystore/ServerKeyStore"),
-							SERVER_KEY_STORE_PASSWORD.toCharArray());
-					tks.load(new FileInputStream("serverKeystore/tServerKeyStore"),
-							SERVER_TRUST_KEY_STORE_PASSWORD.toCharArray());
-					kmf.init(ks, SERVER_KEY_STORE_PASSWORD.toCharArray());
-					tmf.init(tks);
-					ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-
-					socket = (SSLSocket) ctx.getSocketFactory().createSocket(ht.getHostname(), ht.getPort());
+					SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+					socket = (SSLSocket) sslsocketfactory.createSocket(ht.getHostname(), ht.getPort());
 
 					newCommand = (JSONObject) parser.parse(clientCommand.toJSONString());
 					newCommand.put("relay", "false");
@@ -1099,17 +1059,7 @@ public class EZServer {
 					socket.close();
 				} catch (IOException | ParseException e) {
 					e.printStackTrace();
-				} catch (NoSuchAlgorithmException e) {
-					e.printStackTrace();
-				} catch (KeyStoreException e) {
-					e.printStackTrace();
-				} catch (CertificateException e) {
-					e.printStackTrace();
-				} catch (UnrecoverableKeyException e) {
-					e.printStackTrace();
-				} catch (KeyManagementException e) {
-					e.printStackTrace();
-				}
+				} 
 			}
 		}
 		resultSize.put("resultSize", "" + (results.size() - 1));
@@ -1623,7 +1573,7 @@ public class EZServer {
 
 					// not himself
 					boolean localHostFlag = false;
-					if (selectedHost.getHostname().equals("localhost")) {
+					if ((selectedHost.getHostname().equals("localhost"))||(selectedHost.getHostname().equals("127.0.0.1"))) {
 						localHostFlag = true;
 						selectedHost.setHostname(hostAddress);
 					}
@@ -1639,40 +1589,15 @@ public class EZServer {
 					exchangeCommand.put("command", "EXCHANGE");
 					exchangeCommand.put("serverList", serverList);
 					SSLSocket socket;
-					try {
-						SSLContext ctx = SSLContext.getInstance("SSL");
-						KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-						TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-						KeyStore ks = KeyStore.getInstance("JKS");
-						KeyStore tks = KeyStore.getInstance("JKS");
-
-						ks.load(new FileInputStream("serverKeystore/ServerKeyStore"),
-								SERVER_KEY_STORE_PASSWORD.toCharArray());
-						tks.load(new FileInputStream("serverKeystore/tServerKeyStore"),
-								SERVER_TRUST_KEY_STORE_PASSWORD.toCharArray());
-						kmf.init(ks, SERVER_KEY_STORE_PASSWORD.toCharArray());
-						tmf.init(tks);
-						ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-
-						socket = (SSLSocket) ctx.getSocketFactory().createSocket(selectedHost.getHostname(),
+					try{
+						SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+						socket = (SSLSocket) sslsocketfactory.createSocket(selectedHost.getHostname(),
 								selectedHost.getPort());
 						sendToServer(exchangeCommand, socket);
 						socket.close();
 					} catch (IOException e) {
-						// remove
-						System.out.println("Fault Detect");
 						removeHost_secure(selectedHost);
-					} catch (NoSuchAlgorithmException e) {
-						e.printStackTrace();
-					} catch (KeyStoreException e) {
-						e.printStackTrace();
-					} catch (CertificateException e) {
-						e.printStackTrace();
-					} catch (UnrecoverableKeyException e) {
-						e.printStackTrace();
-					} catch (KeyManagementException e) {
-						e.printStackTrace();
-					}
+					} 
 				}
 			}
 		}
@@ -1724,6 +1649,7 @@ public class EZServer {
 						sc.close();
 					} catch (IOException e) {
 						// remove
+						System.out.println("IO Exception");
 						removeHost(selectedHost);
 					}
 				}
