@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.json.simple.JSONArray;
@@ -153,8 +154,6 @@ public class SubscribeEventListener implements ISubscribeEventListener{
 	}
 	
 	private class SubscriberToServer extends Thread{
-		private static final String CLIENT_KEY_STORE_PASSWORD = "123456";
-		private static final String CLIENT_TRUST_KEY_STORE_PASSWORD = "123456";
 		
 		Host ht;
 		boolean secure = false;
@@ -171,20 +170,15 @@ public class SubscribeEventListener implements ISubscribeEventListener{
 			Socket socket = null;
 			try{
 				if(secure == true){
-					SSLContext ctx = SSLContext.getInstance("SSL");  
-					KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");  
-		            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");  
-		            KeyStore ks = KeyStore.getInstance("JKS");
-		            KeyStore tks = KeyStore.getInstance("JKS");
+					System.setProperty("javax.net.ssl.keyStore","serverKeystore/ServerKeyStore");
+					System.setProperty("javax.net.ssl.keyStorePassword","123456");
+					System.setProperty("javax.net.ssl.trustStore","serverKeystore/ServerKeyStore");
+					System.setProperty("javax.net.ssl.trustStorePassword","123456");
+					
+					SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+					socket = (SSLSocket) sslsocketfactory.createSocket(ht.getHostname(), ht.getPort());
 		            
-		            ks.load(new FileInputStream("clientKeyStore/ClientKeyStore"), CLIENT_KEY_STORE_PASSWORD.toCharArray());  
-		            tks.load(new FileInputStream("clientKeyStore/tClientKeyStore"), CLIENT_TRUST_KEY_STORE_PASSWORD.toCharArray());  
-		            kmf.init(ks, CLIENT_KEY_STORE_PASSWORD.toCharArray());  
-		            tmf.init(tks);  
-		            ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-		            
-		            socket = (SSLSocket) ctx.getSocketFactory().createSocket(ht.getHostname(), ht.getPort());
-				}else{
+		        }else{
 					socket = new Socket(ht.getHostname(),ht.getPort());
 				}
 				
@@ -221,21 +215,6 @@ public class SubscribeEventListener implements ISubscribeEventListener{
 				System.out.println(e.toString());
 			}catch (ParseException e) {
 				System.out.println(e.toString());
-			}catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (KeyStoreException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (CertificateException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (UnrecoverableKeyException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (KeyManagementException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}finally{
 				try {
 					if(socket!=null)
