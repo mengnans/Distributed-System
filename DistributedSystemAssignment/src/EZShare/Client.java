@@ -361,7 +361,7 @@ public class Client {
 			/**enter secure mode*/
 			if(cmd.hasOption("secure")){
 				secure=true;
-//				port = 3781;
+				port = 3781;
 			}
 			
 			/**get server host and port*/
