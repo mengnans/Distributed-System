@@ -1367,7 +1367,12 @@ public class EZServer {
 					Host tempHost = new Host(hostname, Integer.parseInt(port));
 					if (hostList.isEmpty()) {
 						hostList.add(tempHost);
-						listenerManager.informSubscribersOfNewServer(tempHost);
+						try{
+							if( InetAddress.getLocalHost().getHostAddress()!=tempHost.getHostname())
+								listenerManager.informSubscribersOfNewServer(tempHost);
+						}catch(UnknownHostException e){
+							System.out.println(e.toString());
+						}
 					}
 					// check the same host
 					else {
@@ -1382,7 +1387,12 @@ public class EZServer {
 						}
 						if (flag) {
 							hostList.add(tempHost);
-							listenerManager.informSubscribersOfNewServer(tempHost);
+							try{
+								if( InetAddress.getLocalHost().getHostAddress()!=tempHost.getHostname())
+									listenerManager.informSubscribersOfNewServer(tempHost);
+							}catch(UnknownHostException e){
+								System.out.println(e.toString());
+							}
 						}
 					}
 				} else {
@@ -1423,7 +1433,12 @@ public class EZServer {
 					Host tempHost = new Host(hostname, Integer.parseInt(port));
 					if (hostList_secure.isEmpty()) {
 						hostList_secure.add(tempHost);
-						listenerManager_secure.informSubscribersOfNewServer(tempHost);
+						try{
+							if( InetAddress.getLocalHost().getHostAddress()!=tempHost.getHostname())
+								listenerManager_secure.informSubscribersOfNewServer(tempHost);
+						}catch(UnknownHostException e){
+							System.out.println(e.toString());
+						}
 					}
 					// check the same host
 					else {
@@ -1438,7 +1453,12 @@ public class EZServer {
 						}
 						if (flag) {
 							hostList_secure.add(tempHost);
-							listenerManager_secure.informSubscribersOfNewServer(tempHost);
+							try{
+								if( InetAddress.getLocalHost().getHostAddress()!=tempHost.getHostname())
+									listenerManager_secure.informSubscribersOfNewServer(tempHost);
+							}catch(UnknownHostException e){
+								System.out.println(e.toString());
+							}
 						}
 					}
 				} else {
