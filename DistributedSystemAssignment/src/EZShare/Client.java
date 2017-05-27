@@ -101,6 +101,7 @@ public class Client {
 				
 				if (result.containsKey("response")) {
 					if("success".equals(result.get("response").toString())){
+						System.out.println("subscribe success!");
 						Thread persistentConn = new Thread( () -> waitForEnter(output, (String)request.get("id")));
 						persistentConn.start();
 						
