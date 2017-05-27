@@ -53,7 +53,7 @@ import com.event.SubscribeListenerManager;
  *         Xuelin Zhao 801736 Hangyu Xia 802971
  *
  */
-public class EZServer {
+public class Server {
 
 	private static SubscribeListenerManager listenerManager = new SubscribeListenerManager();
 	private static SubscribeListenerManager listenerManager_secure = new SubscribeListenerManager();
@@ -90,7 +90,7 @@ public class EZServer {
 
 	private static String hostAddress;
 	// log4j logger
-	private static Logger logger = Logger.getLogger(EZServer.class);
+	private static Logger logger = Logger.getLogger(Server.class);
 
 	public static void main(String[] args) {
 
@@ -112,9 +112,9 @@ public class EZServer {
 		options.addOption("connectionintervallimit", true, "connection interval limit in seconds");
 		options.addOption("exchangeinterval", true, "exchange interval in seconds");
 		options.addOption("port", true, "server port, an integer");
+		options.addOption("sport",true, "secure port number");
 		options.addOption("secret", true, "secret");
 		options.addOption("debug", "print debug information");
-		options.addOption("sport", "secure port number");
 		CommandLineParser parser = new DefaultParser();
 		CommandLine cmd = null;
 		try {
@@ -144,13 +144,13 @@ public class EZServer {
 			if (cmd.hasOption("port")) {
 				port = Integer.parseInt(cmd.getOptionValue("port"));
 			}
+			if (cmd.hasOption("sport")) {
+				port_secure = Integer.parseInt(cmd.getOptionValue("sport"));
+			}
 			if (cmd.hasOption("secret")) {
 				secret = cmd.getOptionValue("secret");
 			} else
 				secret = getSecret();
-			if (cmd.hasOption("sport")) {
-				port_secure = Integer.parseInt(cmd.getOptionValue("sport"));
-			}
 		} catch (org.apache.commons.cli.ParseException e) {
 			e.printStackTrace();
 		}

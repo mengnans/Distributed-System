@@ -2,30 +2,16 @@ package com.event;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -35,7 +21,6 @@ import org.json.simple.parser.ParseException;
 import com.host.Host;
 import com.interfaces.ISubscribeEventListener;
 import com.resource.Resource;
-import com.resource.ResourceKey;
 import com.util.Util;
 
 //listen to SubscribeEvent. Return matched resource which is contained in event to the client when an event happends 
