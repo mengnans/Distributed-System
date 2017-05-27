@@ -314,7 +314,7 @@ public class Client {
 		System.out.println("-share					share resource on server");
 		System.out.println("-tags <arg>				resource tags, tag1,tag2,tag3,...");
 		System.out.println("-uri <arg>				resource URI");
-		System.out.println("-subcribe 				subscribe to the server");
+		System.out.println("-subscribe 				subscribe to the server");
 	}
 	
 	public static JSONObject getRequestFromCommandLine(String[] args){

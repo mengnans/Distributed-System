@@ -79,7 +79,7 @@ public class Server {
 	// connection interval limit
 	private static long connectionIntervalLimit = 1;
 	// exchange interval
-	private static long exchangeInterval = 10;
+	private static long exchangeInterval = 10 * 60;
 	// secure exchange interval
 	// store those clients' addresses who just used the server
 	private static ArrayList<InetAddress> clientAddresses = new ArrayList<InetAddress>();
